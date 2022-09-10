@@ -1,0 +1,56 @@
+version: '3.9'
+
+services:
+  adminer:
+    image: adminer
+    container_name: adminer-docker
+    depends_on:
+      - postgresql-docker
+    ports:
+      - '8080:8080'
+    networks:
+      - bot-network
+    restart: on-failure
+
+  telegram-bot:
+    environment:
+      - NODE_ENV=development
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./:/usr/src/app
+    container_name: telegram-bot
+    expose:
+      - '3000'
+    ports:
+      - '3000:3000'
+    command: npm run start
+    depends_on:
+      - postgresql-docker
+    networks:
+      - bot-network
+    restart: on-failure
+    
+  postgresql-docker:
+    image: postgres
+    container_name: ${DB_HOST}
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgresdata:/var/lib/postgresql/data
+      # create example table
+      - ./sql/create_example_table.sql:/docker-entrypoint-initdb.d/create_example_table.sql
+      # fill example table
+      - ./sql/fill_example_table.sql:/docker-entrypoint-initdb.d/fill_example_table.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - bot-network
+    restart: on-failure
+volumes:
+  postgresdata:
+networks:
+  bot-network:
